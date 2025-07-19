@@ -13,6 +13,16 @@ setting_up_container
 network_check
 update_os
 
+# Fix locale settings
+msg_info "Configuring locale settings"
+export LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive
+locale-gen en_US.UTF-8
+update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+msg_ok "Locale configured"
+
 # Set timezone
 msg_info "Setting timezone to America/Los_Angeles"
 export TZ=America/Los_Angeles
@@ -31,6 +41,7 @@ msg_ok "Package mirrors configured"
 # Install base packages
 msg_info "Installing base packages"
 $STD apt-get install -y \
+    locales \
     curl \
     wget \
     gnupg2 \
