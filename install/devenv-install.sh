@@ -65,8 +65,9 @@ msg_ok "Base packages installed"
 
 # Install Node.js (latest)
 msg_info "Installing Node.js (latest)"
-curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
-$STD apt-get install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_current.x | bash - 2>&1
+apt-get update
+apt-get install -y nodejs
 msg_ok "Node.js installed"
 
 # Install Go
@@ -95,13 +96,11 @@ msg_ok "Environment variables set"
 # Install GitHub CLI
 msg_info "Installing GitHub CLI"
 mkdir -p -m 755 /etc/apt/keyrings
-wget -nv -O /tmp/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
-cat /tmp/githubcli-archive-keyring.gpg > /etc/apt/keyrings/githubcli-archive-keyring.gpg
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/etc/apt/keyrings/githubcli-archive-keyring.gpg
 chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
-$STD apt-get update
-$STD apt-get install -y gh
-rm -f /tmp/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+apt-get update
+apt-get install -y gh
 msg_ok "GitHub CLI installed"
 
 # Create directories with proper permissions
