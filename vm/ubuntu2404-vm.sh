@@ -216,7 +216,7 @@ function default_settings() {
   MAC="$GEN_MAC"
   VLAN=""
   MTU=""
-  START_VM="yes"
+  START_VM="no"
   METHOD="default"
   echo -e "${CONTAINERID}${BOLD}${DGN}Virtual Machine ID: ${BGN}${VMID}${CL}"
   echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}q35${CL}"
@@ -230,7 +230,7 @@ function default_settings() {
   echo -e "${MACADDRESS}${BOLD}${DGN}MAC Address: ${BGN}${MAC}${CL}"
   echo -e "${VLANTAG}${BOLD}${DGN}VLAN: ${BGN}Default${CL}"
   echo -e "${DEFAULT}${BOLD}${DGN}Interface MTU Size: ${BGN}Default${CL}"
-  echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}yes${CL}"
+  echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}no${CL}"
   echo -e "${CREATING}${BOLD}${DGN}Creating a Ubuntu 24.04 VM using the above default settings${CL}"
 }
 
@@ -462,14 +462,30 @@ else
 fi
 msg_ok "Using ${CL}${BL}$STORAGE${CL} ${GN}for Storage Location."
 msg_ok "Virtual Machine ID is ${CL}${BL}$VMID${CL}."
-msg_info "Retrieving the URL for the Ubuntu 24.04 Disk Image"
+msg_info "Checking for Ubuntu 24.04 Disk Image"
 URL=https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cloud-images/noble/current/noble-server-cloudimg-amd64.img
-sleep 2
-msg_ok "${CL}${BL}${URL}${CL}"
-curl -f#SL -o "$(basename "$URL")" "$URL"
-echo -en "\e[1A\e[0K"
 FILE=$(basename $URL)
-msg_ok "Downloaded ${CL}${BL}${FILE}${CL}"
+CACHE_DIR="/var/lib/vz/template/cache"
+CACHE_FILE="${CACHE_DIR}/${FILE}"
+
+# Create cache directory if it doesn't exist
+mkdir -p "$CACHE_DIR"
+
+# Check if cached file exists
+if [ -f "$CACHE_FILE" ]; then
+  msg_ok "Using cached ${CL}${BL}${FILE}${CL}"
+  cp "$CACHE_FILE" "$FILE"
+else
+  msg_info "Downloading Ubuntu 24.04 Disk Image"
+  sleep 2
+  msg_ok "${CL}${BL}${URL}${CL}"
+  curl -f#SL -o "$FILE" "$URL"
+  echo -en "\e[1A\e[0K"
+  msg_ok "Downloaded ${CL}${BL}${FILE}${CL}"
+  # Save to cache for future use
+  cp "$FILE" "$CACHE_FILE"
+  msg_ok "Cached image for future use"
+fi
 
 STORAGE_TYPE=$(pvesm status -storage $STORAGE | awk 'NR>1 {print $2}')
 case $STORAGE_TYPE in
