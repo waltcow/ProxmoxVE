@@ -506,6 +506,54 @@ qm set $VMID \
   -serial0 socket >/dev/null
 DESCRIPTION="Ubuntu 24.04 VM"
 qm set $VMID -description "$DESCRIPTION" >/dev/null
+
+# Configure Cloud-Init with Tsinghua mirror and NVIDIA driver
+msg_info "Configuring Cloud-Init with Tsinghua mirror and NVIDIA driver"
+cat > /tmp/cloud-init-user-${VMID}.yaml <<'EOF'
+#cloud-config
+apt:
+  primary:
+    - arches: [default]
+      uri: https://mirrors.tuna.tsinghua.edu.cn/ubuntu/
+  security:
+    - arches: [default]
+      uri: https://mirrors.tuna.tsinghua.edu.cn/ubuntu/
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - build-essential
+  - dkms
+  - linux-headers-generic
+
+runcmd:
+  # Install NVIDIA driver repository
+  - wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -O /tmp/cuda-keyring.deb
+  - dpkg -i /tmp/cuda-keyring.deb
+  - apt-get update
+  # Install NVIDIA driver (version 570 - required for RTX 5090)
+  - apt-get install -y nvidia-driver-570 nvidia-utils-570
+  # Clean up
+  - rm -f /tmp/cuda-keyring.deb
+  # Log completion
+  - echo "NVIDIA driver installation completed at $(date)" >> /var/log/nvidia-install.log
+  # Reboot to load the driver
+  - shutdown -r +1 "Rebooting in 1 minute to load NVIDIA driver"
+
+final_message: "Cloud-Init setup complete. NVIDIA driver installed. System will reboot shortly."
+EOF
+
+# Create snippets directory if it doesn't exist
+mkdir -p /var/lib/vz/snippets
+
+# Copy user-data to snippets
+cp /tmp/cloud-init-user-${VMID}.yaml /var/lib/vz/snippets/user-data-${VMID}.yaml
+
+# Set Cloud-Init custom config
+qm set $VMID --cicustom "user=local:snippets/user-data-${VMID}.yaml" >/dev/null
+msg_ok "Cloud-Init configured with Tsinghua mirror and NVIDIA driver auto-install"
+
 if [ -n "$DISK_SIZE" ]; then
   msg_info "Resizing disk to $DISK_SIZE GB"
   qm resize $VMID scsi0 ${DISK_SIZE} >/dev/null
