@@ -4,7 +4,9 @@
 # Author: thost96 (thost96) | Co-Author: michelroegl-brunner
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
 
-source /dev/stdin <<<$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func)
+# API function stubs (disabled remote reporting)
+post_to_api_vm() { :; }
+post_update_to_api() { :; }
 
 function header_info() {
   clear
