@@ -204,12 +204,12 @@ function exit-script() {
 
 function default_settings() {
   VMID=$(get_valid_nextid)
-  FORMAT=",efitype=4m"
-  MACHINE=""
+  FORMAT=""
+  MACHINE=" -machine q35"
   DISK_SIZE="7G"
   DISK_CACHE=""
   HN="ubuntu"
-  CPU_TYPE=""
+  CPU_TYPE=" -cpu host"
   CORE_COUNT="2"
   RAM_SIZE="2048"
   BRG="vmbr0"
@@ -219,11 +219,11 @@ function default_settings() {
   START_VM="yes"
   METHOD="default"
   echo -e "${CONTAINERID}${BOLD}${DGN}Virtual Machine ID: ${BGN}${VMID}${CL}"
-  echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}i440fx${CL}"
+  echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}q35${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Size: ${BGN}${DISK_SIZE}${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Cache: ${BGN}None${CL}"
   echo -e "${HOSTNAME}${BOLD}${DGN}Hostname: ${BGN}${HN}${CL}"
-  echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}KVM64${CL}"
+  echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}Host${CL}"
   echo -e "${CPUCORE}${BOLD}${DGN}CPU Cores: ${BGN}${CORE_COUNT}${CL}"
   echo -e "${RAMSIZE}${BOLD}${DGN}RAM Size: ${BGN}${RAM_SIZE}${CL}"
   echo -e "${BRIDGE}${BOLD}${DGN}Bridge: ${BGN}${BRG}${CL}"
@@ -255,8 +255,8 @@ function advanced_settings() {
   done
 
   if MACH=$(whiptail --backtitle "Proxmox VE Helper Scripts" --title "MACHINE TYPE" --radiolist --cancel-button Exit-Script "Choose Type" 10 58 2 \
-    "i440fx" "Machine i440fx" ON \
-    "q35" "Machine q35" OFF \
+    "q35" "Machine q35 (Default)" ON \
+    "i440fx" "Machine i440fx" OFF \
     3>&1 1>&2 2>&3); then
     if [ $MACH = q35 ]; then
       echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}$MACH${CL}"
@@ -314,8 +314,8 @@ function advanced_settings() {
   fi
 
   if CPU_TYPE1=$(whiptail --backtitle "Proxmox VE Helper Scripts" --title "CPU MODEL" --radiolist "Choose" --cancel-button Exit-Script 10 58 2 \
-    "0" "KVM64 (Default)" ON \
-    "1" "Host" OFF \
+    "1" "Host (Default)" ON \
+    "0" "KVM64" OFF \
     3>&1 1>&2 2>&3); then
     if [ $CPU_TYPE1 = "1" ]; then
       echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}Host${CL}"
@@ -508,9 +508,18 @@ DESCRIPTION="Ubuntu 24.04 VM"
 qm set $VMID -description "$DESCRIPTION" >/dev/null
 
 # Configure Cloud-Init with Tsinghua mirror and NVIDIA driver
-msg_info "Configuring Cloud-Init with Tsinghua mirror and NVIDIA driver"
+msg_info "Configuring Cloud-Init with Tsinghua mirror, NVIDIA driver and DHCP networking"
 cat > /tmp/cloud-init-user-${VMID}.yaml <<'EOF'
 #cloud-config
+network:
+  version: 2
+  ethernets:
+    all:
+      match:
+        name: en*
+      dhcp4: true
+      dhcp6: true
+
 apt:
   primary:
     - arches: [default]
@@ -552,7 +561,7 @@ cp /tmp/cloud-init-user-${VMID}.yaml /var/lib/vz/snippets/user-data-${VMID}.yaml
 
 # Set Cloud-Init custom config
 qm set $VMID --cicustom "user=local:snippets/user-data-${VMID}.yaml" >/dev/null
-msg_ok "Cloud-Init configured with Tsinghua mirror and NVIDIA driver auto-install"
+msg_ok "Cloud-Init configured with DHCP networking, Tsinghua mirror and NVIDIA driver auto-install"
 
 if [ -n "$DISK_SIZE" ]; then
   msg_info "Resizing disk to $DISK_SIZE GB"
